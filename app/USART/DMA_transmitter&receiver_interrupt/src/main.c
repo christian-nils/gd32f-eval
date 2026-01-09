@@ -40,6 +40,7 @@ OF SUCH DAMAGE.
 #define ARRAYNUM(arr_name) (uint32_t)(sizeof(arr_name) / sizeof(*(arr_name)))
 #define USART0_DATA_ADDRESS ((uint32_t)&USART_DATA(USART0))
 
+__IO FlagStatus g_transfer_complete = RESET;
 uint8_t rxbuffer[10];
 uint8_t txbuffer[] = "\n\rUSART DMA receive and transmit example, please input 10 bytes:\n\r";
 
@@ -57,6 +58,8 @@ void USART0_init(void)
   usart_enable(USART0);
 }
 
+void nvic_config(void);
+
 /*!
     \brief      main function
     \param[in]  none
@@ -68,12 +71,15 @@ int main(void)
   dma_parameter_struct dma_init_struct;
   /* enable DMA0 */
   rcu_periph_clock_enable(RCU_DMA0);
-  /* configure USART0 */
+  /* initialize USART */
   USART0_init();
+  /*configure DMA0 interrupt*/
+  nvic_config();
+
   /* deinitialize DMA channel3(USART0 tx) */
   dma_deinit(DMA0, DMA_CH3);
   dma_struct_para_init(&dma_init_struct);
-  usart_transmit_config(USART0, USART_TRANSMIT_DISABLE);
+
   dma_init_struct.direction = DMA_MEMORY_TO_PERIPHERAL;
   dma_init_struct.memory_addr = (uint32_t)txbuffer;
   dma_init_struct.memory_inc = DMA_MEMORY_INCREASE_ENABLE;
@@ -84,50 +90,70 @@ int main(void)
   dma_init_struct.periph_width = DMA_PERIPHERAL_WIDTH_8BIT;
   dma_init_struct.priority = DMA_PRIORITY_ULTRA_HIGH;
   dma_init(DMA0, DMA_CH3, &dma_init_struct);
+
+  /* deinitialize DMA channel4 (USART0 rx) */
+  dma_deinit(DMA0, DMA_CH4);
+  dma_struct_para_init(&dma_init_struct);
+
+  dma_init_struct.direction = DMA_PERIPHERAL_TO_MEMORY;
+  dma_init_struct.memory_addr = (uint32_t)rxbuffer;
+  dma_init_struct.memory_inc = DMA_MEMORY_INCREASE_ENABLE;
+  dma_init_struct.memory_width = DMA_MEMORY_WIDTH_8BIT;
+  dma_init_struct.number = 10;
+  dma_init_struct.periph_addr = USART0_DATA_ADDRESS;
+  dma_init_struct.periph_inc = DMA_PERIPH_INCREASE_DISABLE;
+  dma_init_struct.periph_width = DMA_PERIPHERAL_WIDTH_8BIT;
+  dma_init_struct.priority = DMA_PRIORITY_ULTRA_HIGH;
+  dma_init(DMA0, DMA_CH4, &dma_init_struct);
+
   /* configure DMA mode */
   dma_circulation_disable(DMA0, DMA_CH3);
+  dma_memory_to_memory_disable(DMA0, DMA_CH3);
+  dma_circulation_disable(DMA0, DMA_CH4);
+  dma_memory_to_memory_disable(DMA0, DMA_CH4);
 
-  usart_transmit_config(USART0, USART_TRANSMIT_ENABLE);
+  /* enable USART DMA for reception */
+  usart_dma_receive_config(USART0, USART_RECEIVE_DMA_ENABLE);
+  /* enable DMA0 channel4 transfer complete interrupt */
+  dma_interrupt_enable(DMA0, DMA_CH4, DMA_INT_FTF);
+  /* enable DMA0 channel4 */
+  dma_channel_enable(DMA0, DMA_CH4);
   /* enable USART DMA for transmission */
   usart_dma_transmit_config(USART0, USART_TRANSMIT_DMA_ENABLE);
-  /* enable DMA channel3 */
+  /* enable DMA0 channel3 transfer complete interrupt */
+  dma_interrupt_enable(DMA0, DMA_CH3, DMA_INT_FTF);
+  /* enable DMA0 channel3 */
   dma_channel_enable(DMA0, DMA_CH3);
 
-  /* wait DMA channel transfer complete */
-  while (RESET == dma_flag_get(DMA0, DMA_CH3, DMA_INTF_FTFIF))
+  /* waiting for the transfer to complete*/
+  while (RESET == g_transfer_complete)
   {
   }
+
+  g_transfer_complete = RESET;
+
+  /* waiting for the transfer to complete*/
+  while (RESET == g_transfer_complete)
+  {
+  }
+
+  printf("\n\r%s\n\r", rxbuffer);
 
   while (1)
   {
-    /* deinitialize DMA channel4 (USART0 rx) */
-    dma_deinit(DMA0, DMA_CH4);
-    usart_flag_clear(USART0, USART_FLAG_RBNE);
-    usart_dma_receive_config(USART0, USART_RECEIVE_DMA_ENABLE);
-    dma_struct_para_init(&dma_init_struct);
-    dma_init_struct.direction = DMA_PERIPHERAL_TO_MEMORY;
-    dma_init_struct.memory_addr = (uint32_t)rxbuffer;
-    dma_init_struct.memory_inc = DMA_MEMORY_INCREASE_ENABLE;
-    dma_init_struct.memory_width = DMA_MEMORY_WIDTH_8BIT;
-    dma_init_struct.number = 10;
-    dma_init_struct.periph_addr = USART0_DATA_ADDRESS;
-    dma_init_struct.periph_inc = DMA_PERIPH_INCREASE_DISABLE;
-    dma_init_struct.periph_width = DMA_PERIPHERAL_WIDTH_8BIT;
-    dma_init_struct.priority = DMA_PRIORITY_ULTRA_HIGH;
-    dma_init(DMA0, DMA_CH4, &dma_init_struct);
-    /* configure DMA mode */
-    dma_circulation_disable(DMA0, DMA_CH4);
-    /* enable DMA channel4 */
-    dma_channel_enable(DMA0, DMA_CH4);
-
-    /* wait DMA channel transfer complete */
-    while (RESET == dma_flag_get(DMA0, DMA_CH4, DMA_INTF_FTFIF))
-    {
-    }
-
-    usart_dma_receive_config(USART0, USART_RECEIVE_DMA_DISABLE);
-    printf("\n\r%s\n\r", rxbuffer);
   }
+}
+
+/*!
+    \brief      configure DMA interrupt
+    \param[in]  none
+    \param[out] none
+    \retval     none
+*/
+void nvic_config(void)
+{
+  nvic_irq_enable(DMA0_Channel3_IRQn, 0, 0);
+  nvic_irq_enable(DMA0_Channel4_IRQn, 0, 1);
 }
 
 /* retarget the gcc's C library printf function to the USART */
