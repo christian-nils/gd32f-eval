@@ -3,23 +3,7 @@
     {
       "type": "shell",
       "label": "ST-LINKv2 flash",
-      "command": "openocd",
-      "args": [
-        "-f",
-        "interface/stlink-v2.cfg",
-        "-f",
-        "target/stm32f3x.cfg",
-        "-c",
-        "init",
-        "-c",
-        "reset halt",
-        "-c",
-        "flash write_image erase build/app/gd32f3-eval.bin 0x08000000",
-        "-c",
-        "reset",
-        "-c",
-        "exit"
-      ],
+      "command": "set -a; source ${workspaceFolder}/.env; cp build/app/$GD32F3_APP/gd32f3-eval.elf build/app/gd32f3-eval.elf; openocd -f interface/stlink-v2.cfg -f target/stm32f3x.cfg -c init -c \"reset halt\" -c \"flash write_image erase build/app/$GD32F3_APP/gd32f3-eval.bin 0x08000000\" -c reset -c exit",
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -34,15 +18,22 @@
       ]
     },
     {
-      "type": "cmake",
+      "type": "shell",
       "label": "CMake: clean rebuild",
-      "command": "cleanRebuild",
-      "targets": [
-        "all"
-      ],
-      "group": "build",
+      "command": "set -a; source ${workspaceFolder}/.env; cmake -GNinja -Bbuild -DGD32F3_APP=$GD32F3_APP; cmake --build ${workspaceFolder}/build --config Debug --target clean --; cmake --build ${workspaceFolder}/build",
       "problemMatcher": [],
       "detail": "CMake template clean rebuild task"
     },
+    // {
+    //   "type": "cmake",
+    //   "label": "CMake: clean rebuild",
+    //   "command": "cleanRebuild",
+    //   "targets": [
+    //     "all"
+    //   ],
+    //   "group": "build",
+    //   "problemMatcher": [],
+    //   "detail": "CMake template clean rebuild task"
+    // },
   ]
 }

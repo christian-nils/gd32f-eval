@@ -17,11 +17,17 @@ sudo dnf install openocd -y
 # Build
 
 ```bash
-cmake -Bbuild -GNinja && cmake --build build
+cmake -Bbuild -GNinja && cmake --build build -DGD32F3_APP=USART/printf
 ```
+
+Replace `USART/printf` with the actual app you want to compile (do the same below when flashing).
 
 If successfully compiled, you can now flash the MCU:
 
 ```bash
-st-flash write build/app/gd32f3-eval.bin 0x08000000
+st-flash write build/app/USART/printf/gd32f3-eval.bin 0x08000000
 ```
+
+# Debug
+
+Use the debug launch (called `Debug with OpenOCD`) in VS Code to do the compilation and the flashing. You need to edit the `.env` file with the app you want to debug.

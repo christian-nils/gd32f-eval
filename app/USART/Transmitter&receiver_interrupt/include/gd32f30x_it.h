@@ -55,6 +55,6 @@ void DebugMon_Handler(void);
 /* this function handles PendSV exception */
 void PendSV_Handler(void);
 /* this function handles USART1 exception */
-void USART1_IRQHandler(void);
+void USART0_IRQHandler(void);
 
 #endif /* GD32F30X_IT_H */

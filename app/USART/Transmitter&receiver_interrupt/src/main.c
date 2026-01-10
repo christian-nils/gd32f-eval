@@ -20,18 +20,18 @@ uint8_t rx_size = 32;
 __IO uint8_t txcount = 0;
 __IO uint16_t rxcount = 0;
 
-void usart1_init(void)
+void USART0_init(void)
 {
   /* USART configuration */
   rcu_periph_clock_enable(RCU_GPIOA);
-  rcu_periph_clock_enable(RCU_USART1);
-  gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_2);
-  gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_3);
-  usart_deinit(USART1);
-  usart_baudrate_set(USART1, 115200U);
-  usart_receive_config(USART1, USART_RECEIVE_ENABLE);
-  usart_transmit_config(USART1, USART_TRANSMIT_ENABLE);
-  usart_enable(USART1);
+  rcu_periph_clock_enable(RCU_USART0);
+  gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
+  gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+  usart_deinit(USART0);
+  usart_baudrate_set(USART0, 115200U);
+  usart_receive_config(USART0, USART_RECEIVE_ENABLE);
+  usart_transmit_config(USART0, USART_TRANSMIT_ENABLE);
+  usart_enable(USART0);
 }
 
 /*!
@@ -43,21 +43,21 @@ void usart1_init(void)
 int main(void)
 {
 
-  /* configure USART1 */
-  usart1_init();
+  /* configure USART0 */
+  USART0_init();
   /* USART interrupt configuration */
-  nvic_irq_enable(USART1_IRQn, 0, 0);
+  nvic_irq_enable(USART0_IRQn, 0, 0);
   /* enable USART TBE interrupt */
-  usart_interrupt_enable(USART1, USART_INT_TBE);
+  usart_interrupt_enable(USART0, USART_INT_TBE);
 
   /* wait until USART send the transmitter_buffer */
   while (txcount < tx_size)
     ;
 
-  while (RESET == usart_flag_get(USART1, USART_FLAG_TC))
+  while (RESET == usart_flag_get(USART0, USART_FLAG_TC))
     ;
 
-  usart_interrupt_enable(USART1, USART_INT_RBNE);
+  usart_interrupt_enable(USART0, USART_INT_RBNE);
 
   /* wait until USART receive the receiver_buffer */
   while (rxcount < rx_size)
@@ -85,8 +85,8 @@ int _write(int file, char *data, int len)
   // arbitrary timeout 1000
   for (int i = 0; i < len; i++)
   {
-    usart_data_transmit(USART1, (uint8_t)data[i]);
-    while (RESET == usart_flag_get(USART1, USART_FLAG_TBE))
+    usart_data_transmit(USART0, (uint8_t)data[i]);
+    while (RESET == usart_flag_get(USART0, USART_FLAG_TBE))
       ;
   }
 

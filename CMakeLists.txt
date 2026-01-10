@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
+
+set(GD32F3_APP "USART/printf" CACHE STRING "The app to compile.")
 set(CMAKE_C_STANDARD 99)
 
 set(CORE_LIB_DIR ${CMAKE_SOURCE_DIR}/azure_rtos)
@@ -12,4 +14,4 @@ include(cmake/utilities.cmake)
 project(gd32f3-eval_main C ASM)
 
 add_subdirectory(lib)
-add_subdirectory(app)
+add_subdirectory("app/${GD32F3_APP}")

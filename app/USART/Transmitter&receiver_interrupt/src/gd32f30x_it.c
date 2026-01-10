@@ -139,24 +139,24 @@ void PendSV_Handler(void)
     \param[out] none
     \retval     none
 */
-void USART1_IRQHandler(void)
+void USART0_IRQHandler(void)
 {
-  if (RESET != usart_interrupt_flag_get(USART1, USART_INT_FLAG_RBNE))
+  if (RESET != usart_interrupt_flag_get(USART0, USART_INT_FLAG_RBNE))
   {
     /* receive data */
-    rxbuffer[rxcount++] = usart_data_receive(USART1);
+    rxbuffer[rxcount++] = usart_data_receive(USART0);
     if (rxcount == rx_size)
     {
-      usart_interrupt_disable(USART1, USART_INT_RBNE);
+      usart_interrupt_disable(USART0, USART_INT_RBNE);
     }
   }
-  if (RESET != usart_interrupt_flag_get(USART1, USART_INT_FLAG_TBE))
+  if (RESET != usart_interrupt_flag_get(USART0, USART_INT_FLAG_TBE))
   {
     /* transmit data */
-    usart_data_transmit(USART1, txbuffer[txcount++]);
+    usart_data_transmit(USART0, txbuffer[txcount++]);
     if (txcount == tx_size)
     {
-      usart_interrupt_disable(USART1, USART_INT_TBE);
+      usart_interrupt_disable(USART0, USART_INT_TBE);
     }
   }
 }
