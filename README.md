@@ -13,6 +13,11 @@ sudo dnf install gcc-arm-linux-gnu -y
 sudo dnf install openocd -y
 
 ```
+I you plan to run the micro-ros (ROS2 kilted) example, you need to install the dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
 
 # Build
 

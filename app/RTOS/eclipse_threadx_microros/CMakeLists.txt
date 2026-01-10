@@ -2,7 +2,10 @@ set(SOURCES
     ../../gd32f3_eval.c
     ../../startup/tx_initialize_low_level.S
     src/main.c
+    src/microros_time.c
+    src/microros_transports.c
     src/newlib_nano.c
+    src/gd32f30x_it.c
 )
 
 add_executable(gd32f3-eval
@@ -13,6 +16,7 @@ add_executable(gd32f3-eval
 target_link_libraries(gd32f3-eval
     gd32f30x
     azrtos::threadx
+    libmicroros-prebuilt
 )
 
 target_include_directories(gd32f3-eval
