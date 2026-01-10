@@ -22,7 +22,7 @@ python -m pip install -r requirements.txt
 # Build
 
 ```bash
-cmake -Bbuild -GNinja && cmake --build build -DGD32F3_APP=USART/printf
+cmake -Bbuild -GNinja -DGD32F3_APP=USART/printf && cmake --build build 
 ```
 
 Replace `USART/printf` with the actual app you want to compile (do the same below when flashing).
