@@ -1,1 +1,2 @@
+add_subdirectory(threadx)
 add_subdirectory(GD32F30x_Firmware)

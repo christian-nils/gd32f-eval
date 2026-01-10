@@ -1,6 +1,5 @@
 set(SOURCES
     ../../gd32f3_eval.c
-    ../../gd32f3_eval.h
     src/main.c
     src/gd32f30x_it.c
 )
@@ -16,6 +15,7 @@ target_link_libraries(gd32f3-eval
 
 target_include_directories(gd32f3-eval
     PUBLIC
+    ../..
     ./include
 )
 

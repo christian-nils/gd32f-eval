@@ -1,6 +1,7 @@
 set(SOURCES
-    src/main.c
     ../../gd32f3_eval.c
+    ../../startup/tx_initialize_low_level.S
+    src/main.c
 )
 
 add_executable(gd32f3-eval
@@ -10,11 +11,13 @@ add_executable(gd32f3-eval
 
 target_link_libraries(gd32f3-eval
     gd32f30x
+    azrtos::threadx
 )
 
 target_include_directories(gd32f3-eval
     PUBLIC
     ../..
+    ./include
 )
 
 set_target_linker(gd32f3-eval  ${CMAKE_CURRENT_SOURCE_DIR}/../../startup/GD32F303RC.ld)

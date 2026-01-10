@@ -61,9 +61,9 @@ Infinite_Loop:
   .size Default_Handler, .-Default_Handler
 
    .section  .vectors,"a",%progbits
-   .global __gVectors
+   .global g_pfnVectors
 
-__gVectors:
+g_pfnVectors:
                     .word _sp                            /* Top of Stack */
                     .word Reset_Handler                  /* 1:Reset Handler */
                     .word NMI_Handler                    /* 2:NMI Handler */
@@ -144,7 +144,7 @@ __gVectors:
                     .word DMA1_Channel3_4_IRQHandler     /* 75:DMA1 Channel3 and Channel4 */
                                        
 
-   .size   __gVectors, . - __gVectors
+   .size   g_pfnVectors, . - g_pfnVectors
 
   .weak NMI_Handler
   .thumb_set NMI_Handler,Default_Handler
