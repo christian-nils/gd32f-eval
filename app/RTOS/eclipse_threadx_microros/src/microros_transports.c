@@ -70,12 +70,8 @@ size_t microros_transport_read(struct uxrCustomTransport *transport, uint8_t *bu
 
   while (read_counter < len)
   {
-    /* wait until end of transmit */
-    while (RESET == usart_flag_get(USART0, USART_FLAG_TC))
-    {
-    }
     /* wait the byte is entirely received by USART0 */
-    while (RESET == usart_flag_get(USART0, USART_FLAG_RBNE) && ((int)tx_time_get() - init_time) < timeout * (int)TX_TIMER_TICKS_PER_SECOND / 1000)
+    while (RESET == usart_flag_get(USART0, USART_FLAG_RBNE))
       ;
 
     /* store the received byte in the rxbuffer1 */
