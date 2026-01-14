@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include "gd32f30x.h"
 #include "gd32f3_eval.h"
+#include "cmsis_utils.h"
 
 #include <rcl/rcl.h>
 #include <rcl/error_handling.h>
@@ -21,12 +22,38 @@
 #include "microros_transports.h"
 #include <rmw_microros/rmw_microros.h>
 
-#define DEMO_STACK_SIZE 2048
+#define DEMO_STACK_SIZE 5000
 #define DEMO_BYTE_POOL_SIZE 9120
-#define DEMO_BLOCK_POOL_SIZE 100
-#define DEMO_QUEUE_SIZE 100
 
 rcl_publisher_t publisher;
+
+void USART0_init(void)
+{
+  /* USART configuration */
+  rcu_periph_clock_enable(RCU_GPIOA);
+  rcu_periph_clock_enable(RCU_USART0);
+  gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
+  gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+  usart_deinit(USART0);
+  usart_baudrate_set(USART0, 115200U);
+  usart_receive_config(USART0, USART_RECEIVE_ENABLE);
+  usart_transmit_config(USART0, USART_TRANSMIT_ENABLE);
+  usart_enable(USART0);
+}
+
+void USART2_init(void)
+{
+  /* USART configuration */
+  rcu_periph_clock_enable(RCU_GPIOB);
+  rcu_periph_clock_enable(RCU_USART2);
+  gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+  gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_11);
+  usart_deinit(USART2);
+  usart_baudrate_set(USART2, 115200U);
+  usart_receive_config(USART2, USART_RECEIVE_ENABLE);
+  usart_transmit_config(USART2, USART_TRANSMIT_ENABLE);
+  usart_enable(USART2);
+}
 
 #define RCCHECK(fn)                                                                \
   {                                                                                \
@@ -58,32 +85,11 @@ UCHAR memory_area[DEMO_BYTE_POOL_SIZE];
 
 void thread_0_entry(ULONG thread_input);
 
-void USART0_init(void)
-{
-  /* USART configuration */
-  rcu_periph_clock_enable(RCU_GPIOA);
-  rcu_periph_clock_enable(RCU_USART0);
-  gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
-  gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
-  usart_deinit(USART0);
-  usart_baudrate_set(USART0, 115200U);
-  usart_receive_config(USART0, USART_RECEIVE_ENABLE);
-  usart_transmit_config(USART0, USART_TRANSMIT_ENABLE);
-  usart_enable(USART0);
-}
-
 void subscription_callback(const void *msgin)
 {
   const std_msgs__msg__Int32 *msg = (const std_msgs__msg__Int32 *)msgin;
 
-  if (msg->data == 0)
-  {
-    gpio_bit_set(GPIOF, GPIO_PIN_11);
-  }
-  else
-  {
-    gpio_bit_reset(GPIOF, GPIO_PIN_11);
-  }
+  gd_eval_led_toggle(LED2);
 }
 
 void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
@@ -109,7 +115,10 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
 int main()
 {
 
-  USART0_init();
+  systick_interval_set(TX_TIMER_TICKS_PER_SECOND);
+
+  gd_eval_led_init(LED2);
+  USART2_init();
   printf("Starting ThreadX + microROS code sample...\n");
 
   gd_eval_led_init(LED2);
@@ -120,13 +129,17 @@ int main()
       .stop_bits = USART_STB_1BIT,
       .word_length = USART_WL_8BIT};
 
+  microros_usart_init(USART0, serial_comm_args.baud_rate);
+
+  // micro-ROS configuration
+
   rmw_uros_set_custom_transport(
       true,
-      (void *)&serial_comm_args,
-      microros_transport_open,
-      microros_transport_close,
-      microros_transport_write,
-      microros_transport_read);
+      (void *)USART0,
+      usart_it_transport_open,
+      usart_it_transport_close,
+      usart_it_transport_write,
+      usart_it_transport_read);
   /* Enter the ThreadX kernel.  */
   tx_kernel_enter();
 }
@@ -163,18 +176,18 @@ void thread_0_entry(ULONG thread_input)
   // create init_options
   rclc_support_t support;
   res = rclc_support_init(&support, 0, NULL, &allocator);
-
+  RCCHECK(res);
   // create nodes
   rcl_node_t node;
   res = rclc_node_init_default(&node, "threadx_node", "", &support);
-
+  RCCHECK(res);
   // create publisher
   res = rclc_publisher_init_default(
       &publisher,
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "threadx_publisher");
-
+  RCCHECK(res);
   // create subscriber
   rcl_subscription_t subscriber;
   res = rclc_subscription_init_default(
@@ -185,7 +198,7 @@ void thread_0_entry(ULONG thread_input)
 
   // create timer,
   rcl_timer_t timer;
-  rclc_timer_init_default2(
+  res = rclc_timer_init_default2(
       &timer,
       &support,
       RCL_MS_TO_NS(1000),
@@ -194,35 +207,46 @@ void thread_0_entry(ULONG thread_input)
 
   // create executor
   rclc_executor_t executor = rclc_executor_get_zero_initialized_executor();
-  rclc_executor_init(&executor, &support.context, 2, &allocator);
+  res = rclc_executor_init(&executor, &support.context, 2, &allocator);
 
   std_msgs__msg__Int32 msg = {0};
-  rclc_executor_add_subscription(&executor, &subscriber, &msg, subscription_callback, ON_NEW_DATA);
-  rclc_executor_add_timer(&executor, &timer);
+  res = rclc_executor_add_subscription(&executor, &subscriber, &msg, subscription_callback, ON_NEW_DATA);
+  res = rclc_executor_add_timer(&executor, &timer);
 
+  // while (1)
+  // {
+  //   gd_eval_led_toggle(LED2);
+  //   tx_thread_sleep((ULONG)1 * TX_TIMER_TICKS_PER_SECOND);
+  // }
   /* This thread simply sits in while-forever-sleep loop.  */
   while (1)
   {
+    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+    tx_thread_sleep((ULONG)0.1 * TX_TIMER_TICKS_PER_SECOND);
   }
+  // Free resources.
+  RCCHECK(rcl_subscription_fini(&subscriber, &node));
+  RCCHECK(rcl_publisher_fini(&publisher, &node));
+  RCCHECK(rcl_node_fini(&node));
 }
 
-// /* retarget the gcc's C library printf function to the USART */
-// int _write(int file, char *data, int len)
-// {
-//   if ((file != STDOUT_FILENO) && (file != STDERR_FILENO))
-//   {
-//     errno = EBADF;
-//     return -1;
-//   }
+/* retarget the gcc's C library printf function to the USART */
+int _write(int file, char *data, int len)
+{
+  if ((file != STDOUT_FILENO) && (file != STDERR_FILENO))
+  {
+    errno = EBADF;
+    return -1;
+  }
 
-//   // arbitrary timeout 1000
-//   for (int i = 0; i < len; i++)
-//   {
-//     usart_data_transmit(USART0, (uint8_t)data[i]);
-//     while (RESET == usart_flag_get(USART0, USART_FLAG_TBE))
-//       ;
-//   }
+  // arbitrary timeout 1000
+  for (int i = 0; i < len; i++)
+  {
+    usart_data_transmit(USART2, (uint8_t)data[i]);
+    while (RESET == usart_flag_get(USART2, USART_FLAG_TBE))
+      ;
+  }
 
-//   // return # of bytes written - as best we can tell
-//   return len;
-// }
+  // return # of bytes written - as best we can tell
+  return len;
+}

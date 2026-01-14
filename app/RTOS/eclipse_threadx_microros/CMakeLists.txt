@@ -4,8 +4,10 @@ set(SOURCES
     src/main.c
     src/microros_time.c
     src/microros_transports.c
-    # src/newlib_nano.c
+    src/newlib_nano.c
     src/gd32f30x_it.c
+    ../../../../lib/microros/micro_ros_src/src/rclc/rclc/src/rclc/publisher.c
+    ../../../../lib/microros/micro_ros_src/src/rcl/rcl/src/rcl/publisher.c
 )
 
 add_executable(gd32f3-eval
